@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How to Break the Internet</title>
+<style>
+:root{
+  --bg:#0c1b33; --bg2:#12264a; --fg:#f5f1e8; --muted:#a9b4c9;
+  --cyan:#8fc6ff; --pink:#f0907e; --amber:#e6c170; --green:#8fd9a8;
+  --tile:#152c54; --line:#274574;
+}
+body.light{
+  --bg:#f8f6f1; --bg2:#ece8df; --fg:#0c1b33; --muted:#4c5a72;
+  --cyan:#1a5fa8; --pink:#b8432f; --amber:#8a6420; --green:#1f7a45;
+  --tile:#ffffff; --line:#cfd6e3;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;overflow:hidden}
+#stage{position:fixed;inset:0;overflow:hidden}
+#deck{position:absolute;left:50%;top:50%;width:1600px;height:900px;transform-origin:0 0}
+.slide{position:absolute;inset:0;display:none;flex-direction:column;gap:28px;padding:64px 90px 70px;font-size:40px;line-height:1.28;background:var(--bg)}
+.slide.active{display:flex}
+h1{font-family:Georgia,"Times New Roman",serif;font-weight:400;font-size:104px;line-height:1.04;margin:0;letter-spacing:-1px}
+h2{font-family:Georgia,"Times New Roman",serif;font-weight:400;font-size:62px;line-height:1.1;margin:0 0 6px;letter-spacing:-.3px}
+.slide p{margin:0}
+.muted{color:var(--muted)}
+.small{font-size:30px}
+.tiny{font-size:24px;color:var(--muted)}
+.cyan{color:var(--cyan)} .pink{color:var(--pink)} .amber{color:var(--amber)} .green{color:var(--green)}
+.center{align-items:center;justify-content:center;text-align:center}
+.vcenter{justify-content:center}
+.big{font-size:150px;font-weight:800;line-height:1;letter-spacing:-3px}
+.huge{font-size:300px;font-weight:900;line-height:1;letter-spacing:-8px}
+.label{font-size:28px;text-transform:uppercase;letter-spacing:4px;color:var(--cyan);font-weight:700}
+.section .label{color:var(--pink)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start}
+.three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:36px}
+.card{background:var(--tile);border:2px solid var(--line);border-radius:22px;padding:28px 34px}
+ul{margin:0;padding-left:44px} li{margin:8px 0}
+.badges{display:flex;flex-wrap:wrap;gap:20px;justify-content:center}
+.badge{background:var(--tile);border:2px solid var(--line);border-radius:18px;padding:14px 26px;font-size:34px}
+.fragment{visibility:hidden;opacity:0;transition:opacity .25s}
+.fragment.visible{visibility:visible;opacity:1}
+.strike{text-decoration:line-through;text-decoration-color:var(--pink);text-decoration-thickness:6px}
+.timer{font-variant-numeric:tabular-nums;font-size:56px;color:var(--amber);font-weight:700}
+.digits{font-family:ui-monospace,"Cascadia Mono",Consolas,Menlo,monospace;font-size:30px;line-height:1.35;word-break:break-all;letter-spacing:1px;color:var(--cyan)}
+.bar{height:10px;width:220px;background:var(--pink);border-radius:5px;margin-top:20px}
+.step{font-size:46px;margin:0}
+.strip{display:flex;gap:10px;flex-wrap:wrap}
+.tile{width:92px;height:92px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:34px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.5);position:relative}
+.tile small{position:absolute;top:4px;left:8px;font-size:16px;opacity:.8;font-weight:400}
+.controls{display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-size:26px}
+button,select{font:inherit;font-size:26px;padding:8px 18px;border-radius:12px;border:2px solid var(--line);background:var(--tile);color:var(--fg);cursor:pointer}
+button:hover{border-color:var(--cyan)}
+input[type=number]{font:inherit;font-size:26px;width:120px;padding:6px 10px;border-radius:10px;border:2px solid var(--line);background:var(--tile);color:var(--fg)}
+.hint{font-size:22px;color:var(--muted);margin-left:auto}
+.tl{display:grid;grid-template-columns:repeat(6,1fr);gap:18px;align-items:start;position:relative;padding-top:34px}
+.tl::before{content:"";position:absolute;left:0;right:0;top:10px;height:6px;background:var(--line);border-radius:3px}
+.tl .pt{position:relative;font-size:26px}
+.tl .pt::before{content:"";position:absolute;top:-38px;left:0;width:22px;height:22px;border-radius:50%;background:var(--cyan)}
+.tl .pt.future::before{background:var(--muted)}
+.tl b{display:block;font-size:34px;margin-bottom:6px}
+.flow{display:flex;gap:18px;align-items:stretch}
+.flow .box{flex:1;background:var(--tile);border:2px solid var(--line);border-radius:20px;padding:24px;font-size:31px;display:flex;align-items:center;text-align:center;justify-content:center}
+.flow .box.q{border-color:var(--cyan);box-shadow:0 0 0 4px rgba(62,224,255,.25)}
+.flow .arr{display:flex;align-items:center;font-size:44px;color:var(--muted)}
+table.t{border-collapse:collapse;width:100%;font-size:34px}
+table.t td,table.t th{padding:16px 20px;border-bottom:2px solid var(--line);text-align:left;vertical-align:top}
+table.t th{color:var(--cyan);font-size:30px;text-transform:uppercase;letter-spacing:2px}
+.switches{display:flex;gap:14px;justify-content:center}
+.sw{width:74px;height:120px;border-radius:14px;background:var(--tile);border:2px solid var(--line);display:flex;flex-direction:column;justify-content:flex-end;padding:8px;font-size:34px;text-align:center;font-weight:700}
+.sw.on{justify-content:flex-start;color:var(--cyan);border-color:var(--cyan)}
+.sw i{display:block;height:44px;border-radius:8px;background:var(--line)}
+.sw.on i{background:var(--cyan)}
+.qbig{font-size:120px;font-weight:900;line-height:1;min-width:150px;text-align:center}
+.pbar{height:34px;background:var(--line);border-radius:8px;overflow:hidden;width:100%}
+.pbar i{display:block;height:100%;background:var(--cyan)}
+.pbar.one i{background:var(--pink)}
+canvas{display:block;background:var(--tile);border-radius:14px;border:2px solid var(--line)}
+.readout{font-size:32px;line-height:1.35;min-height:150px}
+.readout div{opacity:0;animation:fadein .3s forwards}
+@keyframes fadein{to{opacity:1}}
+#progress{position:fixed;left:0;top:0;height:6px;background:var(--cyan);width:0;z-index:5}
+#num{position:fixed;right:22px;bottom:14px;font-size:20px;color:var(--muted);z-index:5}
+#notes{position:fixed;left:0;right:0;bottom:0;height:26vh;background:rgba(10,12,20,.94);color:#eee;border-top:3px solid var(--cyan);padding:16px 28px;font-size:calc(12px + .9vw);line-height:1.35;display:none;z-index:6;overflow:auto}
+#notes .meta{display:flex;gap:40px;color:var(--amber);font-weight:700;margin-bottom:8px}
+#help{position:fixed;inset:0;background:rgba(0,0,0,.85);color:#fff;display:none;z-index:7;padding:6vh 8vw;font-size:calc(12px + 1vw);line-height:1.6}
+#help.on,#notes.on{display:block}#ntext{white-space:pre-line}
+#help kbd{background:#333;border-radius:6px;padding:2px 10px;margin-right:8px;font-family:inherit}
+/* print / pdf mode */
+body.print{overflow:visible;height:auto}
+body.print #stage{position:static;overflow:visible}
+body.print #deck{position:static;transform:none!important;width:1600px;height:auto}
+body.print .slide{position:relative;display:flex;width:1600px;height:900px;overflow:hidden;break-after:page;page-break-after:always}
+body.print .fragment{visibility:visible;opacity:1}
+body.print #progress,body.print #num,body.print #notes,body.print #help,body.print .hint{display:none}
+@page{size:1600px 900px;margin:0}
+</style>
+</head>
+<body>
+<div id="stage"><div id="deck">
+
+<!-- 1 -->
+<section class="slide center">
+    <h1>How to Break<br>the Internet</h1>
+  <p style="font-size:48px" class="muted">A beginner's guide to quantum computing</p>
+  <div class="bar"></div>
+  <p style="font-size:36px">Leo Y. Zhang, with a co-presenter</p>
+  <p class="small muted">No physics needed. GCSE maths is enough.</p>
+</section>
+
+<!-- 2 -->
+<section class="slide vcenter">
+  <h2>You've already used unbreakable maths today</h2>
+  <div class="badges">
+    <span class="badge">WhatsApp</span><span class="badge">Snapchat</span><span class="badge">TikTok</span><span class="badge">Instagram</span>
+    <span class="badge">Email</span><span class="badge">Overnight software update</span><span class="badge">Bank card</span><span class="badge">Passport chip</span>
+    <span class="badge">School records</span><span class="badge">Government</span>
+  </div>
+  <p style="font-size:46px;text-align:center;margin-top:20px">Every one of them snapped shut a lock made of <span class="cyan">numbers</span>.</p>
+  <p class="small muted" style="text-align:center">And that lock only works because one particular sum is hard.</p>
+</section>
+
+<!-- 3 -->
+<section class="slide center" data-demo="timer">
+  <p class="label">Challenge 1</p>
+  <p class="big">23 × 12</p>
+  <p class="timer">0.0 s</p>
+  <p class="big cyan fragment">= 276</p>
+  <p class="small muted fragment">23 × 10 + 23 × 2. A few seconds. GCSE.</p>
+</section>
+
+<!-- 4 -->
+<section class="slide center" data-demo="timer">
+  <p class="label">Challenge 2</p>
+  <p class="big">3,977 = ? × ?</p>
+  <p style="font-size:36px" class="muted">(two prime numbers, promise)</p>
+  <p class="timer">0.0 s</p>
+  <p class="small muted fragment">Not 7. Not 11. Not 13, 17, 19, 23, 29, 31, 37 …</p>
+  <p class="big cyan fragment">= 41 × 97</p>
+</section>
+
+<!-- 5 -->
+<section class="slide vcenter">
+  <h2>Multiplying is a one-way street</h2>
+  <div class="two">
+    <div class="card"><p class="label green">Forwards</p><p style="font-size:48px">41 × 97 → 3,977</p><p class="small muted">Seconds. One method. Works every time.</p></div>
+    <div class="card"><p class="label pink">Backwards</p><p style="font-size:48px">3,977 → ? × ?</p><p class="small muted">No method. Just trying. And it gets worse, fast.</p></div>
+  </div>
+  <p style="font-size:44px">Bigger number → more things to try. <span class="pink">Horrifyingly</span> more.</p>
+</section>
+
+<!-- 6 -->
+<section class="slide">
+  <h2>Make it bigger</h2>
+  <div class="digits">19301320012970576072446623765093170275572854241015423528950031038068395770830301531676855369718321702521082390050746064933548001656934145806363542838532600158015836129974336102302470144049427761095558116140340304087601170614153282123418140092085344027001692771553207047129235614631726416742927579130081472276081463561769917997509848025992689174879265684791525514600762945395387372974715864038097155340691100245753835817290636786845873465666080616955581070958444647712944743405515491332360568823018629662840484593442914847108977001939205755542110077436373813685875278675221483151525149028152824412707830532969846943459</div>
+  <p class="small"><span class="cyan">617 digits.</span> Two primes, about 300 digits each. This is a real 2048-bit key.</p>
+  <p class="small muted">A laptop, best method known: longer than the universe has existed. Every computer on Earth together: not in your lifetime.</p>
+</section>
+
+<!-- 7 -->
+<section class="slide vcenter">
+  <h2>RSA: a padlock anyone can close, only you can open</h2>
+  <p class="small muted">1977: Rivest, Shamir, Adleman (MIT). &nbsp;Actually 1973: <span class="amber">Clifford, GCHQ, Cheltenham</span>. Top secret until 1997.</p>
+  <div class="two" style="align-items:center">
+    <svg viewBox="0 0 220 260" width="260" height="300" style="justify-self:center" aria-hidden="true">
+      <path d="M60 120 V80 a50 50 0 0 1 100 0 v40" fill="none" stroke="var(--amber)" stroke-width="18" stroke-linecap="round"/>
+      <rect x="30" y="118" width="160" height="120" rx="20" fill="var(--amber)"/>
+      <circle cx="110" cy="170" r="16" fill="var(--bg)"/><rect x="104" y="170" width="12" height="36" rx="5" fill="var(--bg)"/>
+    </svg>
+    <div>
+      <p class="fragment"><span class="cyan">The padlock = the big number N.</span><br><span class="small muted">Your <b>public key</b>. Give copies to everyone. Anyone can snap it shut on a message.</span></p>
+      <p class="fragment" style="margin-top:26px"><span class="pink">The key = the two primes.</span><br><span class="small muted">Your <b>private key</b>. Only you have them. Know the primes → open the padlock.</span></p>
+      <p class="fragment" style="margin-top:26px">Don't know them? <span class="amber">Un-multiply 617 digits.</span></p>
+    </div>
+  </div>
+</section>
+
+<!-- 8 -->
+<section class="slide vcenter">
+  <h2>Where the padlock lives</h2>
+  <div class="badges" style="font-size:34px">
+    <span class="badge">The padlock in the browser address bar</span><span class="badge">Setting up a WhatsApp / Signal / iMessage chat</span>
+    <span class="badge">Bank cards &amp; contactless</span><span class="badge">Passport chip</span>
+    <span class="badge">“Is this update really from Apple?”</span><span class="badge">Hospitals · government · military</span>
+  </div>
+  <p style="font-size:46px;text-align:center;margin-top:16px">All of it rests on one bet: <span class="pink">un-multiplying is hard.</span></p>
+</section>
+
+<!-- 9 -->
+<section class="slide section center">
+  <p class="label">1994</p>
+  <h1 style="font-size:84px">Peter Shor shows the bet would lose.</h1>
+  <p style="font-size:44px" class="muted">A method to factor that number in <span class="cyan">hours</span>, not the age of the universe.</p>
+  <p style="font-size:44px" class="fragment">One catch: it needed a computer that didn't exist. <span class="pink">A quantum computer.</span></p>
+  <p class="small muted fragment">Thirty-two years later, we're still building it.</p>
+</section>
+
+<!-- 10 -->
+<section class="slide center">
+  <h2>What a quantum computer is <span class="pink">not</span></h2>
+  <p style="font-size:56px" class="strike">“A computer that tries every answer at once.”</p>
+  <p style="font-size:40px" class="muted fragment">If that were true it could solve everything instantly. It can't.<br>It's brilliant at a <span class="cyan">few very specific jobs</span>. Factoring happens to be one.</p>
+</section>
+
+<!-- 11 -->
+<section class="slide center">
+  <h2>Bits</h2>
+  <div class="switches">
+    <div class="sw"><i></i>0</div><div class="sw on"><i></i>1</div><div class="sw on"><i></i>1</div><div class="sw"><i></i>0</div><div class="sw on"><i></i>1</div><div class="sw"><i></i>0</div><div class="sw"><i></i>0</div><div class="sw on"><i></i>1</div><div class="sw"><i></i>0</div><div class="sw on"><i></i>1</div><div class="sw on"><i></i>1</div><div class="sw on"><i></i>1</div><div class="sw"><i></i>0</div><div class="sw"><i></i>0</div><div class="sw on"><i></i>1</div><div class="sw"><i></i>0</div>
+  </div>
+  <p style="font-size:44px">A bit is a switch: <span class="cyan">0</span> or <span class="cyan">1</span>. That's it.</p>
+  <p class="small muted">Every photo, video and message is a row of switches. This laptop has a few hundred billion.</p>
+</section>
+
+<!-- 12 -->
+<section class="slide" data-demo="qubit">
+  <h2>Qubits</h2>
+  <div class="two" style="grid-template-columns:520px 1fr;align-items:center">
+    <svg viewBox="0 0 400 400" width="480" height="480" aria-label="qubit dial">
+      <circle cx="200" cy="200" r="170" fill="none" stroke="var(--line)" stroke-width="6"/>
+      <text x="200" y="20" text-anchor="middle" fill="var(--cyan)" font-size="30" font-weight="700">0</text>
+      <text x="200" y="398" text-anchor="middle" fill="var(--pink)" font-size="30" font-weight="700">1</text>
+      <g id="qarrow" style="transform-origin:200px 200px;transition:transform .35s ease">
+        <line x1="200" y1="200" x2="200" y2="50" stroke="var(--amber)" stroke-width="12" stroke-linecap="round"/>
+        <polygon points="200,28 178,64 222,64" fill="var(--amber)"/>
+      </g>
+      <circle cx="200" cy="200" r="12" fill="var(--fg)"/>
+    </svg>
+    <div style="display:flex;flex-direction:column;gap:18px">
+      <div><span class="cyan">Chance of 0</span> &nbsp;<span id="q0t" class="small"></span><div class="pbar"><i id="q0b"></i></div></div>
+      <div><span class="pink">Chance of 1</span> &nbsp;<span id="q1t" class="small"></span><div class="pbar one"><i id="q1b"></i></div></div>
+      <div style="display:flex;align-items:center;gap:30px;margin-top:10px">
+        <div class="qbig" id="qres">·</div>
+        <div class="small muted">Measured so far<br><span id="qtally" style="font-size:36px;color:var(--fg)">0: 0 &nbsp; 1: 0</span></div>
+      </div>
+      <div class="controls"><button data-act="left">[ tilt to 0</button><button data-act="right">tilt to 1 ]</button><button data-act="measure">M measure</button><button data-act="reset">R reset</button></div>
+    </div>
+  </div>
+  <p class="small muted">Before you look: a blend. When you look: it picks. The dial sets the odds. &nbsp;<span class="fragment">A spinning coin is not a computer.</span></p>
+</section>
+
+<!-- 13 -->
+<section class="slide" data-demo="waves">
+  <h2>The secret ingredient: <span class="cyan">signs</span></h2>
+  <svg id="wsvg" viewBox="0 0 1400 420" width="1400" height="420" aria-label="wave interference">
+    <text x="0" y="60" fill="var(--muted)" font-size="26">wave A</text>
+    <text x="0" y="200" fill="var(--muted)" font-size="26">wave B</text>
+    <text x="0" y="350" fill="var(--muted)" font-size="26">A + B</text>
+    <path id="wA" fill="none" stroke="var(--cyan)" stroke-width="6"/>
+    <path id="wB" fill="none" stroke="var(--pink)" stroke-width="6"/>
+    <path id="wS" fill="none" stroke="var(--amber)" stroke-width="8"/>
+  </svg>
+  <div class="controls">
+    <button data-act="in">In step</button><button data-act="out">Out of step</button><button data-act="left">[</button><button data-act="right">]</button>
+    <span id="wlabel" style="font-size:36px;margin-left:20px"></span>
+  </div>
+  <p class="small muted">Every possibility inside the machine is a wave. Peak on peak: bigger. Peak on trough: <span class="pink">nothing</span>.</p>
+</section>
+
+<!-- 14 -->
+<section class="slide center">
+  <p class="label">The one thing to remember</p>
+  <p style="font-family:Georgia,'Times New Roman',serif;font-size:66px;line-height:1.18">A quantum computer is not a machine that tries every answer at once.<br><br>It's a machine for <span class="cyan">choreographing interference</span> so the <span class="pink">wrong answers cancel out</span>.</p>
+  <p class="small muted fragment">Designing the choreography is the algorithm. For most problems, nobody knows one.<br>For factoring, Peter Shor found one.</p>
+</section>
+
+<!-- 15 -->
+<section class="slide vcenter">
+  <h2>Why it's taken thirty years</h2>
+  <div class="two" style="grid-template-columns:420px 1fr;align-items:center">
+    <svg viewBox="0 0 300 520" width="300" height="520" aria-hidden="true">
+      <rect x="130" y="0" width="40" height="40" fill="var(--line)"/>
+      <g fill="var(--amber)" stroke="var(--bg)" stroke-width="3">
+        <ellipse cx="150" cy="70" rx="140" ry="22"/><ellipse cx="150" cy="170" rx="120" ry="20"/><ellipse cx="150" cy="270" rx="100" ry="18"/><ellipse cx="150" cy="370" rx="80" ry="16"/><ellipse cx="150" cy="450" rx="55" ry="12"/>
+      </g>
+      <g stroke="var(--amber)" stroke-width="6"><line x1="60" y1="70" x2="70" y2="170"/><line x1="240" y1="70" x2="230" y2="170"/><line x1="70" y1="170" x2="80" y2="270"/><line x1="230" y1="170" x2="220" y2="270"/><line x1="80" y1="270" x2="95" y2="370"/><line x1="220" y1="270" x2="205" y2="370"/><line x1="95" y1="370" x2="115" y2="450"/><line x1="205" y1="370" x2="185" y2="450"/></g>
+      <rect x="135" y="470" width="30" height="30" rx="4" fill="var(--cyan)"/>
+      <text x="150" y="518" text-anchor="middle" fill="var(--muted)" font-size="20">the chip: 0.01 K</text>
+    </svg>
+    <ul style="font-size:38px">
+      <li>The waves are <span class="pink">fragile</span>: heat, light, a passing lorry scrambles them</li>
+      <li>So: colder than outer space, in a vacuum, shielded</li>
+      <li>…and the qubits <em>still</em> make mistakes constantly</li>
+      <li>Fix: gang up <span class="amber">~1,000 noisy physical qubits</span> → 1 reliable “logical” qubit</li>
+    </ul>
+  </div>
+  <p class="small muted">Remember that thousand. It matters later.</p>
+</section>
+
+<!-- 16 -->
+<section class="slide section center">
+  <p class="label">Shor's trick</p>
+  <h1 style="font-size:96px">Don't factor.<br>Find the <span class="cyan">rhythm</span>.</h1>
+  <p style="font-size:40px" class="muted">Remainders · powers · highest common factor. All GCSE.</p>
+</section>
+
+<!-- 17 -->
+<section class="slide center">
+  <h2>Clock arithmetic</h2>
+  <p style="font-size:72px">17 mod 15 = <span class="cyan">2</span></p>
+  <p style="font-size:72px">49 mod 15 = <span class="cyan">4</span></p>
+  <p style="font-size:40px" class="muted">“mod” means: divide, keep the <b>remainder</b>. Wrap around like a clock: 15 o'clock is 3 o'clock.</p>
+</section>
+
+<!-- 18 -->
+<section class="slide" data-demo="powers">
+  <h2>Powers of <span id="pwa" class="amber">7</span>, wrapped around <span id="pwN" class="amber">15</span></h2>
+  <div class="strip" id="pstrip"></div>
+  <p id="ptext" style="font-size:44px"></p>
+  <p id="pfact" class="fragment small"></p>
+  <div class="controls">
+    a <input type="number" id="pa" value="7" min="2"> &nbsp; N <input type="number" id="pN" value="15" min="4">
+    <button data-preset="7,15">7 mod 15</button><button data-preset="2,21">2 mod 21</button><button data-preset="3,35">3 mod 35</button><button data-preset="2,3977">2 mod 3977</button>
+    <span class="hint">same colour = same remainder</span>
+  </div>
+</section>
+
+<!-- 19 -->
+<section class="slide">
+  <h2>The rhythm hands you the factors</h2>
+  <p class="step">Period <span class="cyan">4</span> → halve it → <span class="cyan">2</span></p>
+  <p class="step">7<sup>2</sup> = <span class="amber">49</span> → look either side: <span class="amber">48</span> and <span class="amber">50</span></p>
+  <p class="step fragment">HCF(48, 15) = <span class="pink">3</span></p>
+  <p class="step fragment">HCF(50, 15) = <span class="pink">5</span></p>
+  <p class="step fragment">15 = <span class="pink">3 × 5</span>. &nbsp;We never divided 15 by anything.</p>
+  <p class="small muted fragment">Why: 7⁴ − 1 is a multiple of 15, and 7⁴ − 1 = (7² − 1)(7² + 1). Difference of two squares.</p>
+</section>
+
+<!-- 20 -->
+<section class="slide center">
+  <h2>So: factoring = finding the period</h2>
+  <p style="font-size:44px">For the 617-digit number, the rhythm repeats after a number of steps that is itself <span class="pink">hundreds of digits long</span>.</p>
+  <p style="font-size:44px" class="muted fragment">Walking along it step by step: longer than the universe has existed.<br>Back where we started.</p>
+</section>
+
+<!-- 21 -->
+<section class="slide" data-demo="qft">
+  <h2>Interference finds the rhythm</h2>
+  <div class="strip" id="qstrip" style="gap:6px"></div>
+  <canvas id="qcanvas" width="1420" height="250"></canvas>
+  <div class="two" style="grid-template-columns:1fr 520px;gap:30px">
+    <div class="readout" id="qread"></div>
+    <div class="controls" style="align-self:start">
+      <button data-preset="7,15">7 mod 15</button><button data-preset="2,21">2 mod 21</button><button data-preset="3,35">3 mod 35</button>
+      <button data-act="measure">M measure</button><button data-act="reset">R reset</button>
+    </div>
+  </div>
+</section>
+
+<!-- 22 -->
+<section class="slide vcenter">
+  <h2>Shor's algorithm, complete</h2>
+  <div class="flow">
+    <div class="box">Pick any number <b>a</b></div><div class="arr">→</div>
+    <div class="box q"><span><b class="cyan">Quantum:</b> find the period of aˣ mod N by interference</span></div><div class="arr">→</div>
+    <div class="box">Halve the period; look either side of a<sup>r/2</sup></div><div class="arr">→</div>
+    <div class="box">HCF gives <b>the factors</b></div>
+  </div>
+  <p class="small muted" style="text-align:center">Unlucky (odd period, or trivial factors)? Pick another <b>a</b>. Works more than half the time.</p>
+  <p style="font-size:44px;text-align:center;margin-top:10px">The quantum computer does <span class="cyan">one job</span>. Everything else is GCSE maths.</p>
+  <p style="font-size:40px;text-align:center" class="fragment">617 digits, on a working machine: <span class="pink">hours to days</span>.</p>
+</section>
+
+<!-- 23 -->
+<section class="slide section center">
+  <p class="label">Part 3</p>
+  <h1>How close are we,<br>honestly?</h1>
+</section>
+
+<!-- 24 -->
+<section class="slide center">
+  <h2>The record</h2>
+  <p style="font-size:40px" class="muted">Biggest number ever factored by Shor's algorithm on a real quantum computer:</p>
+  <p class="huge cyan fragment">21</p>
+  <p class="small muted fragment">2012. And they set it up knowing the answer. (First: 15, in 2001.)</p>
+  <p class="small fragment">“Quantum computer breaks RSA” headlines: usually a different trick, on a number a laptop factors in a millisecond.</p>
+</section>
+
+<!-- 25 -->
+<section class="slide vcenter">
+  <h2>What it would take</h2>
+  <table class="t">
+    <tr><th>Need</th><th>Have</th></tr>
+    <tr><td><span class="pink">~1,000,000</span> physical qubits, error-corrected, running for about a week<br><span class="tiny">Gidney (Google), 2025. It was 20,000,000 in 2019: cleverer maths, no new hardware.</span></td>
+        <td><span class="cyan">~100 to 1,000</span> noisy physical qubits per machine<br><span class="tiny">and a few dozen error-corrected “logical” qubits in the best demonstrations</span></td></tr>
+    <tr><td>Thousands of reliable logical qubits</td><td>Tens, briefly</td></tr>
+  </table>
+  <p style="font-size:44px">The gap: about <span class="pink">a thousand times</span> in size, and reliability. Nobody serious says next year.</p>
+</section>
+
+<!-- 26 -->
+<section class="slide vcenter">
+  <h2>But the curve is bending</h2>
+  <div class="tl">
+    <div class="pt"><b>2001</b>15 factored, 7 qubits</div>
+    <div class="pt fragment"><b>2019</b>Google, 53 qubits: beats a supercomputer (at something useless)</div>
+    <div class="pt fragment"><b>Dec 2024</b>Google Willow: more qubits → <span class="cyan">fewer</span> errors, for the first time</div>
+    <div class="pt fragment"><b>2025</b>&lt;1M-qubit estimate · 98 near-perfect ion qubits · 6,100-atom arrays</div>
+    <div class="pt future fragment"><b>2029</b>IBM target: 200 logical qubits</div>
+    <div class="pt future fragment"><b>2033</b>IBM target: 2,000 logical qubits</div>
+  </div>
+  <p style="font-size:42px;margin-top:20px" class="fragment">Expert surveys: serious odds in the <span class="pink">2030s</span>. You'll be in your twenties.</p>
+</section>
+
+<!-- 27 -->
+<section class="slide center">
+  <h2>Harvest now, decrypt later</h2>
+  <p style="font-size:52px">Record everything today. <span class="muted">Store it.</span><br>Decrypt it when the machine arrives.</p>
+  <p style="font-size:40px" class="fragment">Anything that must still be secret in ten years is at risk <span class="pink">today</span>.</p>
+</section>
+
+<!-- 28 -->
+<section class="slide vcenter">
+  <h2>The fix is already shipping</h2>
+  <p style="font-size:40px">New padlocks made from a <span class="cyan">different</span> hard problem (finding short routes in grids with hundreds of dimensions: “lattices”). Quantum computers are no good at it.</p>
+  <div class="badges" style="justify-content:flex-start">
+    <span class="badge">NIST standards · Aug 2024</span><span class="badge">UK NCSC: everyone switched by 2035</span>
+    <span class="badge">Chrome · 2024</span><span class="badge">Cloudflare (≈⅕ of the web)</span><span class="badge">iMessage</span><span class="badge">Signal</span><span class="badge">SSH</span>
+  </div>
+  <p style="font-size:44px" class="fragment">You used a quantum-proof padlock today. <span class="pink">Nobody told you.</span></p>
+</section>
+
+<!-- 29 -->
+<section class="slide vcenter">
+  <h2>So will the internet break?</h2>
+  <p style="font-size:60px;font-weight:700">Only if we lose the race.</p>
+  <div class="two">
+    <div class="card"><p class="label pink">Side one</p><p>Build a million-qubit machine that runs Shor's algorithm.</p></div>
+    <div class="card"><p class="label cyan">Side two</p><p>Swap every padlock on Earth for a quantum-proof one first.</p></div>
+  </div>
+  <p class="small muted">One of the biggest engineering jobs ever attempted. Happening underneath you, right now.</p>
+</section>
+
+<!-- 30 -->
+<section class="slide vcenter">
+  <h2>Why you should care</h2>
+  <div class="three">
+    <div class="card"><p class="label">1</p><p>The maths is <span class="cyan">your GCSE maths</span>. Remainders, powers, HCF, difference of two squares.</p></div>
+    <div class="card"><p class="label">2</p><p>It's a <span class="cyan">British</span> story. Clifford at GCHQ. The National Quantum Computing Centre at Harwell. Riverlane, OQC, Oxford Ionics, Quantum Motion.</p></div>
+    <div class="card"><p class="label">3</p><p>The people who finish this are <span class="cyan">your age plus ten years</span>.</p></div>
+  </div>
+  <p style="font-size:44px;text-align:center" class="fragment">They're in this room.</p>
+</section>
+
+<!-- 31 -->
+<section class="slide center">
+  <p class="label">One sentence</p>
+  <p style="font-family:Georgia,'Times New Roman',serif;font-size:62px;line-height:1.2">Quantum computers don't try every answer at once. They make the wrong answers <span class="pink">cancel out</span>.<br><br>That's exactly enough to find the <span class="cyan">rhythm</span> that opens the internet's padlock.</p>
+</section>
+
+<!-- 32 -->
+<section class="slide center">
+  <h1>Thank you.<br><span class="cyan">Questions?</span></h1>
+  <div class="bar"></div>
+  <p style="font-size:36px">Leo Y. Zhang, with a co-presenter</p>
+  <p class="small muted">Slides, maths and demo code: github.com/Leo-Y-Zhang/HowToBreakTheInternet</p>
+</section>
+
+<!-- Appendix -->
+<section class="slide appendix vcenter">
+  <p class="label">Appendix · toy RSA with real numbers</p>
+  <div class="two">
+    <div class="card small">
+      <p>Secret primes: p = 61, q = 53</p>
+      <p>Padlock (public): N = 61 × 53 = <b>3233</b>, e = 17</p>
+      <p>Key (private): d = <b>2753</b> &nbsp;<span class="muted">(needs (p−1)(q−1) = 3120)</span></p>
+    </div>
+    <div class="card small">
+      <p>Lock the number 65: 65<sup>17</sup> mod 3233 = <b>2790</b></p>
+      <p>Unlock: 2790<sup>2753</sup> mod 3233 = <b>65</b></p>
+      <p class="pink">Factor 3233 → recompute d → read everything.</p>
+    </div>
+  </div>
+  <p class="small muted">Real keys use 300-digit primes. Same maths, just bigger. <code>Demo Code/toy_rsa.py</code> runs this.</p>
+</section>
+
+<section class="slide appendix vcenter">
+  <p class="label">Appendix · why the rhythm gives the factors</p>
+  <p class="step">a<sup>r</sup> ≡ 1 (mod N) &nbsp;→&nbsp; a<sup>r</sup> − 1 is a multiple of N</p>
+  <p class="step">a<sup>r</sup> − 1 = (a<sup>r/2</sup> − 1)(a<sup>r/2</sup> + 1) &nbsp;<span class="muted small">difference of two squares</span></p>
+  <p class="step">So N's prime factors are shared between the two brackets…</p>
+  <p class="step">…and HCF(a<sup>r/2</sup> − 1, N) and HCF(a<sup>r/2</sup> + 1, N) pick them out.</p>
+  <p class="small muted">Fails if r is odd (can't halve) or a<sup>r/2</sup> ≡ −1 (one bracket is a multiple of N). Random a: works more than half the time. Shor proved it.</p>
+</section>
+
+<section class="slide appendix vcenter">
+  <p class="label">Appendix · what else breaks?</p>
+  <table class="t">
+    <tr><th>Thing</th><th>Quantum verdict</th></tr>
+    <tr><td>RSA, Diffie–Hellman, elliptic curves (TLS, Bitcoin, signatures)</td><td class="pink">Broken by Shor. Bitcoin needs <em>fewer</em> qubits than RSA-2048.</td></tr>
+    <tr><td>AES, ChaCha (the actual message encryption)</td><td class="green">Fine. Grover halves the effective key length; AES-256 stays strong.</td></tr>
+    <tr><td>Password hashes</td><td class="green">Fine. Use a long password; quantum doesn't guess better.</td></tr>
+    <tr><td>New lattice-based padlocks (ML-KEM, ML-DSA)</td><td class="green">No known quantum attack. It's a bet, like RSA was, but a well-tested one.</td></tr>
+  </table>
+</section>
+
+<section class="slide appendix vcenter">
+  <p class="label">Appendix · how to spot a fake “quantum breaks RSA” headline</p>
+  <ul style="font-size:38px">
+    <li>Number smaller than about 50 bits? A laptop does that in a millisecond.</li>
+    <li>“Annealer” or “D-Wave”? Not Shor's algorithm; doesn't scale.</li>
+    <li>“Compiled” circuit, or they knew the answer first? Not a real factoring.</li>
+    <li>No error correction mentioned? It can't be anywhere near RSA-2048.</li>
+    <li>Sober check: Scott Aaronson's blog will have already explained why it's nothing.</li>
+  </ul>
+  <p class="small muted">Honest record as of this talk: 21. If that changes, it will be enormous news from Google, IBM or Quantinuum, with a paper.</p>
+</section>
+
+<section class="slide appendix vcenter">
+  <p class="label">Appendix · go further</p>
+  <ul style="font-size:34px">
+    <li><b>Quantum Country</b> (Matuschak &amp; Nielsen): quantum computing from scratch, free, online.</li>
+    <li><b>3Blue1Brown</b>, “But what is quantum computing?” (Grover's algorithm), YouTube.</li>
+    <li><b>minutephysics</b>, “How Quantum Computers Break Encryption | Shor's Algorithm Explained”, YouTube.</li>
+    <li><b>Veritasium</b>, “How Quantum Computers Break The Internet… Starting Now”, YouTube.</li>
+    <li><b>Scott Aaronson</b>, scottaaronson.blog: the sceptic's view of every big claim.</li>
+    <li><b>IBM Quantum</b>: run programs on a real quantum computer, free.</li>
+    <li><b>NCSC</b>, “Timelines for migration to post-quantum cryptography” (2025).</li>
+    <li>This talk's slides, maths and demo code are in the repository above.</li>
+  </ul>
+</section>
+
+</div></div>
+<div id="progress"></div>
+<div id="num"></div>
+<div id="notes"><div class="meta"><span id="ntime">00:00</span><span id="nslide"></span><span id="nnext"></span></div><div id="ntext"></div></div>
+<div id="help">
+  <b>Keys</b><br>
+  <kbd>→</kbd><kbd>Space</kbd><kbd>PgDn</kbd> next (reveals fragments) &nbsp; <kbd>←</kbd><kbd>PgUp</kbd> back<br>
+  <kbd>Home</kbd><kbd>End</kbd> first / last &nbsp; <kbd>number</kbd>+<kbd>Enter</kbd> jump to slide<br>
+  <kbd>N</kbd> notes + timer &nbsp; <kbd>L</kbd> light / dark &nbsp; <kbd>F</kbd> fullscreen &nbsp; <kbd>?</kbd> this help &nbsp; <kbd>Esc</kbd> close<br>
+  Demo slides: <kbd>M</kbd> measure &nbsp; <kbd>R</kbd> reset &nbsp; <kbd>[</kbd><kbd>]</kbd> tilt / phase<br>
+  Click the right half of the screen for next, left half for back.
+</div>
+
+<script>
+(function(){
+'use strict';
+const W=1600,H=900;
+const deck=document.getElementById('deck');
+const slides=[...document.querySelectorAll('.slide')];
+const MAIN=slides.filter(s=>!s.classList.contains('appendix')).length;
+const PRINT=/[?#&]print/.test(location.href);
+let cur=0, startTime=null, typed='';
+
+/* ---------- helpers ---------- */
+const gcd=(a,b)=>{while(b){[a,b]=[b,a%b];}return a;};
+const modpow=(b,e,m)=>{let r=1n,B=BigInt(b)%BigInt(m),E=BigInt(e),M=BigInt(m);while(E>0n){if(E&1n)r=r*B%M;B=B*B%M;E>>=1n;}return Number(r);};
+const period=(a,N)=>{let x=a%N,r=1;while(x!==1){x=x*a%N;r++;if(r>N)return null;}return r;};
+const hue=(v,N)=>`hsl(${Math.round(360*v/N)} 48% 40%)`;
+const el=id=>document.getElementById(id);
+function factorsFromPeriod(a,N,r){
+  if(r===null) return {ok:false,msg:`${a} and ${N} share a factor: HCF = ${gcd(a,N)}. Lucky, no rhythm needed.`};
+  if(r%2) return {ok:false,msg:`Period ${r} is odd: can't halve it. Unlucky, pick another a.`};
+  const y=modpow(a,r/2,N);
+  if(y===N-1) return {ok:false,msg:`${a}^${r/2} mod ${N} = ${y} = N − 1: the unlucky case. Pick another a.`};
+  const p=gcd(y-1,N), q=gcd(y+1,N);
+  const raw=BigInt(a)**BigInt(r/2); const useRaw=raw<100000000n; const Y=useRaw?raw:BigInt(y);
+  const pw=`${a}<sup>${r/2}</sup>${useRaw?'':' mod '+N} = ${Y}`;
+  if(p===1||p===N) return {ok:false,msg:`${pw} → HCF(${Y-1n}, ${N}) = ${p}, HCF(${Y+1n}, ${N}) = ${q}. Trivial. Pick another a.`};
+  return {ok:true,y,p,q,msg:`Period ${r} → halve it → ${r/2}. ${pw} → ${Y-1n} and ${Y+1n} → HCF(${Y-1n}, ${N}) = ${p}, HCF(${Y+1n}, ${N}) = ${q} → ${N} = ${p} × ${N/p}`};
+}
+
+/* ---------- demos ---------- */
+const demos={};
+
+/* timers on slides 3 and 4 */
+demos.timer=function(slide){
+  const t=slide.querySelector('.timer'); let iv=null,t0=0;
+  const stop=()=>{if(iv){clearInterval(iv);iv=null;}};
+  return {
+    enter(){stop();t0=performance.now();t.textContent='0.0 s';iv=setInterval(()=>{t.textContent=((performance.now()-t0)/1000).toFixed(1)+' s';},100);},
+    leave(){stop();}, fragment(){stop();}, key(){return false;},
+    print(){stop();t.textContent='0.0 s';}
+  };
+};
+
+/* qubit dial, slide 12 */
+demos.qubit=function(slide){
+  const arrow=el('qarrow'), q0b=el('q0b'), q1b=el('q1b'), q0t=el('q0t'), q1t=el('q1t'), res=el('qres'), tally=el('qtally');
+  let theta=53, counts=[0,0], busy=false;
+  const p0=()=>Math.cos(theta*Math.PI/360)**2;
+  function draw(){arrow.style.transform=`rotate(${theta}deg)`;const p=p0();q0b.style.width=(p*100)+'%';q1b.style.width=((1-p)*100)+'%';q0t.textContent=Math.round(p*100)+'%';q1t.textContent=Math.round((1-p)*100)+'%';tally.textContent=`0: ${counts[0]}   1: ${counts[1]}`;}
+  function measure(){
+    if(busy)return;busy=true;res.textContent='·';draw();
+    setTimeout(()=>{const r=Math.random()<p0()?0:1;arrow.style.transform=`rotate(${r?180:0}deg)`;res.textContent=r;res.style.color=r?'var(--pink)':'var(--cyan)';counts[r]++;tally.textContent=`0: ${counts[0]}   1: ${counts[1]}`;setTimeout(()=>{busy=false;},450);},380);
+  }
+  const acts={left(){theta=Math.max(0,theta-10);draw();},right(){theta=Math.min(180,theta+10);draw();},measure,reset(){theta=53;counts=[0,0];res.textContent='·';draw();}};
+  slide.querySelectorAll('button[data-act]').forEach(b=>b.addEventListener('click',()=>acts[b.dataset.act]()));
+  return {enter(){draw();},leave(){},
+    key(k){const m={'[':'left',']':'right',m:'measure',M:'measure',r:'reset',R:'reset'}[k];if(!m)return false;acts[m]();return true;},
+    print(){counts=[8,2];draw();res.textContent='0';res.style.color='var(--cyan)';}};
+};
+
+/* interference, slide 13 */
+demos.waves=function(slide){
+  const A=el('wA'),B=el('wB'),S=el('wS'),label=el('wlabel'); let phi=0;
+  const path=(f,y0,amp)=>{let d='';for(let x=120;x<=1400;x+=4){const t=(x-120)/1280*4*Math.PI;d+=(x===120?'M':'L')+x+' '+(y0-amp*f(t)).toFixed(1)+' ';}return d;};
+  function draw(){
+    A.setAttribute('d',path(t=>Math.sin(t),60,45));B.setAttribute('d',path(t=>Math.sin(t+phi),200,45));
+    S.setAttribute('d',path(t=>Math.sin(t)+Math.sin(t+phi),350,45));
+    const amp=Math.abs(2*Math.cos(phi/2));
+    label.textContent=amp>1.9?'Peak on peak: bigger wave':amp<0.15?'Peak on trough: nothing':`Partly out of step (${Math.round(phi*180/Math.PI)}°)`;
+    label.style.color=amp>1.9?'var(--green)':amp<0.15?'var(--pink)':'var(--amber)';
+  }
+  const acts={in(){phi=0;draw();},out(){phi=Math.PI;draw();},left(){phi=Math.max(0,phi-Math.PI/12);draw();},right(){phi=Math.min(Math.PI,phi+Math.PI/12);draw();}};
+  slide.querySelectorAll('button[data-act]').forEach(b=>b.addEventListener('click',()=>acts[b.dataset.act]()));
+  return {enter(){draw();},leave(){},key(k){const m={'[':'left',']':'right',i:'in',o:'out',r:'in',R:'in'}[k];if(!m)return false;acts[m]();return true;},print(){phi=Math.PI;draw();}};
+};
+
+/* powers mod N strip, slide 18 */
+demos.powers=function(slide){
+  const ia=el('pa'),iN=el('pN'),strip=el('pstrip'),text=el('ptext'),fact=el('pfact');
+  function draw(){
+    let a=parseInt(ia.value,10)||7, N=parseInt(iN.value,10)||15; if(N<4)N=15; if(a<2||a>=N)a=Math.max(2,Math.min(a,N-1));
+    el('pwa').textContent=a; el('pwN').textContent=N;
+    const g=gcd(a,N); const r=g===1?period(a,N):null;
+    const show=Math.min(24, r?Math.max(r*2,r+2):24);
+    let h='',x=1,v=a%N;
+    for(let i=1;i<=show;i++){h+=`<div class="tile" style="background:${hue(v,N)}"><small>${a}<sup>${i}</sup></small>${v}</div>`;v=v*a%N;}
+    strip.innerHTML=h+(r&&r*2>24?`<div class="tile" style="background:var(--line)">…</div>`:'');
+    if(g!==1){text.innerHTML=`HCF(${a}, ${N}) = ${g}. Lucky: that's a factor already.`;fact.textContent='';return;}
+    text.innerHTML=`Back to 1 after <span class="cyan">${r}</span> steps, then it repeats. <b>Period = ${r}</b>.`;
+    const f=factorsFromPeriod(a,N,r);
+    fact.innerHTML=f.ok?`<span class="pink">${f.msg}</span>`:`<span class="amber">${f.msg}</span>`;
+  }
+  [ia,iN].forEach(i=>i.addEventListener('input',draw));
+  slide.querySelectorAll('button[data-preset]').forEach(b=>b.addEventListener('click',()=>{const [a,N]=b.dataset.preset.split(',');ia.value=a;iN.value=N;draw();}));
+  return {enter(){draw();},leave(){},key(k){if(k==='r'||k==='R'){ia.value=7;iN.value=15;draw();return true;}return false;},print(){ia.value=7;iN.value=15;draw();}};
+};
+
+/* interference finds the period, slide 21 */
+demos.qft=function(slide){
+  const strip=el('qstrip'),cv=el('qcanvas'),ctx=cv.getContext('2d'),read=el('qread');
+  let a=7,N=15,Q,r,probs,measured=null;
+  function compute(){
+    r=period(a,N); const n=2*N.toString(2).length; Q=1<<n; probs=new Float64Array(Q);
+    for(let x0=0;x0<r;x0++){const M=Math.floor((Q-1-x0)/r)+1;
+      for(let y=0;y<Q;y++){const th=Math.PI*r*y/Q;const s=Math.sin(th);const v=Math.abs(s)<1e-9?M*M:(Math.sin(M*th)/s)**2;probs[y]+=v/(Q*Q);}}
+  }
+  function draw(){
+    let h='';for(let x=0,v=1;x<20;x++){h+=`<div class="tile" style="width:46px;height:46px;font-size:22px;border-radius:8px;background:${hue(v,N)}">${v}</div>`;v=v*a%N;}
+    strip.innerHTML=h+`<div class="small muted" style="align-self:center;margin-left:12px">…all held at once. Period ${r}.</div>`;
+    const cs=getComputedStyle(document.body);
+    ctx.clearRect(0,0,cv.width,cv.height);
+    const pad=50, w=cv.width-pad-20, base=cv.height-36, top=20; const pk=Math.max(...probs);
+    ctx.fillStyle=cs.getPropertyValue('--muted');ctx.font='20px system-ui';ctx.fillText('0',pad,base+26);ctx.textAlign='right';ctx.fillText(String(Q),pad+w,base+26);ctx.textAlign='left';
+    ctx.fillText('chance of each result after interference',pad,top-2);
+    ctx.fillStyle=cs.getPropertyValue('--cyan');
+    const cols=Math.min(Q,w);
+    for(let c=0;c<cols;c++){const y0=Math.floor(c*Q/cols),y1=Math.floor((c+1)*Q/cols);let m=0;for(let y=y0;y<Math.max(y1,y0+1);y++)m=Math.max(m,probs[y]);
+      const hh=(base-top-10)*m/pk; const x=pad+c*w/cols; ctx.fillRect(x,base-hh,Math.max(1,w/cols-0.5),hh);}
+    if(measured!==null){const x=pad+measured/Q*w;ctx.fillStyle=cs.getPropertyValue('--amber');ctx.beginPath();ctx.moveTo(x,base+4);ctx.lineTo(x-10,base+22);ctx.lineTo(x+10,base+22);ctx.fill();}
+  }
+  function cf(y,Q){let num=y,den=Q,h1=1,h2=0,k1=0,k2=1,best=1;while(den){const q=Math.floor(num/den);const h=q*h1+h2,k=q*k1+k2;if(k>N)break;best=k;h2=h1;h1=h;k2=k1;k1=k;[num,den]=[den,num-q*den];}return best;}
+  function measure(){
+    let u=Math.random(),y=0;for(y=0;y<Q-1;y++){u-=probs[y];if(u<=0)break;}
+    measured=y;draw();
+    const lines=[`Measured <span class="amber">y = ${y}</span> out of Q = ${Q}`];
+    if(y===0){lines.push(`y = 0 tells us nothing. <span class="amber">Unlucky. Run it again.</span>`);}
+    else{
+      let rr=cf(y,Q); const k=Math.round(y*rr/Q);
+      lines.push(`y / Q = ${y} / ${Q} ≈ ${k} / ${rr} &nbsp;→&nbsp; period is <span class="cyan">${rr}</span>${modpow(a,rr,N)!==1?' (or a multiple of it)':''}`);
+      if(modpow(a,rr,N)!==1){let m=rr;while(m<=N&&modpow(a,m,N)!==1)m+=rr;if(m<=N){lines.push(`${a}<sup>${rr}</sup> mod ${N} ≠ 1, but ${a}<sup>${m}</sup> mod ${N} = 1: period <span class="cyan">${m}</span>`);rr=m;}}
+      if(modpow(a,rr,N)===1){const f=factorsFromPeriod(a,N,rr);lines.push(f.ok?`<span class="pink">${f.msg}</span>`:`<span class="amber">${f.msg}</span>`);}
+      else lines.push(`<span class="amber">That didn't give the period. Run it again.</span>`);
+    }
+    read.innerHTML=lines.map((l,i)=>`<div style="animation-delay:${i*0.5}s">${l}</div>`).join('');
+  }
+  function reset(){measured=null;compute();draw();read.innerHTML='';}
+  slide.querySelectorAll('button[data-preset]').forEach(b=>b.addEventListener('click',()=>{[a,N]=b.dataset.preset.split(',').map(Number);reset();}));
+  slide.querySelectorAll('button[data-act]').forEach(b=>b.addEventListener('click',()=>({measure,reset})[b.dataset.act]()));
+  return {enter(){if(!probs)reset();else draw();},leave(){},
+    key(k){if(k==='m'||k==='M'){measure();return true;}if(k==='r'||k==='R'){reset();return true;}return false;},
+    print(){a=7;N=15;reset();measured=64;draw();read.innerHTML=`<div>Measured <span class="amber">y = 64</span> out of Q = 256</div><div>y / Q = 64 / 256 = 1 / 4 → period is <span class="cyan">4</span></div><div><span class="pink">${factorsFromPeriod(7,15,4).msg}</span></div>`;}};
+};
+
+const inst=slides.map(s=>s.dataset.demo?demos[s.dataset.demo](s):null);
+
+/* ---------- navigation ---------- */
+function fit(){const s=Math.min(innerWidth/W,innerHeight/H);deck.style.transform=`translate(${-W/2*s}px,${-H/2*s}px) scale(${s})`;}
+function label(i){return slides[i].classList.contains('appendix')?'A'+(i-MAIN+1):(i+1)+' / '+MAIN;}
+function updateChrome(){
+  el('progress').style.width=(100*cur/(slides.length-1))+'%';el('num').textContent=label(cur);
+  el('nslide').textContent='Slide '+label(cur);el('ntext').textContent=slides[cur].dataset.notes||'';
+  const nx=slides[cur+1];el('nnext').textContent=nx?('Next: '+(nx.querySelector('h1,h2,.label')||{textContent:''}).textContent.replace(/\s+/g,' ').trim().slice(0,60)):'End';
+}
+function go(i,frag){
+  if(i<0||i>=slides.length||i===cur&&frag===undefined)return;
+  if(inst[cur]&&inst[cur].leave)inst[cur].leave();
+  slides[cur].classList.remove('active');cur=i;slides[cur].classList.add('active');
+  slides[cur].querySelectorAll('.fragment').forEach(f=>f.classList.toggle('visible',frag==='all'));
+  if(startTime===null&&cur>0)startTime=performance.now();
+  history.replaceState(null,'','#'+(cur+1));updateChrome();
+  if(inst[cur]&&inst[cur].enter)inst[cur].enter();
+}
+function next(){const f=slides[cur].querySelector('.fragment:not(.visible)');if(f){f.classList.add('visible');if(inst[cur]&&inst[cur].fragment)inst[cur].fragment();return;}go(cur+1,'none');}
+function prev(){const fs=slides[cur].querySelectorAll('.fragment.visible');if(fs.length){fs[fs.length-1].classList.remove('visible');return;}go(cur-1,'all');}
+
+document.addEventListener('keydown',e=>{
+  if(e.target.matches('input,select,textarea')){if(e.key==='Escape')e.target.blur();return;}
+  const k=e.key;
+  if(el('help').classList.contains('on')&&k!=='?'){el('help').classList.remove('on');return;}
+  if(/^[0-9]$/.test(k)){typed+=k;return;}
+  if(k==='Enter'){if(typed){go(Math.min(slides.length,Math.max(1,parseInt(typed,10)))-1,'none');typed='';}else next();e.preventDefault();return;}
+  typed='';
+  if(inst[cur]&&inst[cur].key(k)){e.preventDefault();return;}
+  switch(k){
+    case 'ArrowRight':case ' ':case 'PageDown':case 'ArrowDown':next();e.preventDefault();break;
+    case 'ArrowLeft':case 'PageUp':case 'ArrowUp':case 'Backspace':prev();e.preventDefault();break;
+    case 'Home':go(0,'none');break;case 'End':go(slides.length-1,'all');break;
+    case 'n':case 'N':el('notes').classList.toggle('on');break;
+    case 'l':case 'L':document.body.classList.toggle('light');if(inst[cur]&&inst[cur].enter)inst[cur].enter();break;
+    case 'f':case 'F':document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();break;
+    case '?':el('help').classList.toggle('on');break;
+    case 'Escape':el('notes').classList.remove('on');el('help').classList.remove('on');break;
+  }
+});
+document.getElementById('stage').addEventListener('click',e=>{
+  if(e.target.closest('button,input,select,a,label'))return;
+  (e.clientX>innerWidth/2?next:prev)();
+});
+setInterval(()=>{if(startTime===null)return;const s=Math.floor((performance.now()-startTime)/1000);el('ntime').textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');},500);
+addEventListener('resize',fit);
+
+/* ---------- start ---------- */
+if(PRINT){
+  document.body.classList.add('print');
+  slides.forEach((s,i)=>{s.classList.add('active');if(inst[i]){inst[i].enter();if(inst[i].print)inst[i].print();}});
+  window.__ready=true;
+}else{
+  fit();
+  const h=parseInt(location.hash.slice(1),10);
+  slides[0].classList.add('active');cur=0;
+  if(h>1&&h<=slides.length){go(h-1,'all');}else{updateChrome();}
+  if(inst[0]&&inst[0].enter)inst[0].enter();
+  window.__ready=true;
+}
+})();
+</script>
+</body>
+</html>
